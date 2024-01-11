@@ -1,26 +1,44 @@
-import { Router } from "express";
-import CartManager from '../controlles/cartManager.js';
+const express = require("express");
+const router = express.Router();
 
-const CartRouter = Router();
-const carts = new CartManager
+const CartManager = require("../controlles/cartManager.js");
+const cartManager = new CartManager("./src/models/carts.json");
 
-CartRouter.post("/", async (req, res) => {
-    res.send(await carts.addCarts())
-}
-);
+// Rutas 
 
-CartRouter.get("/", async (req, res) => {
-    res.send(await carts.readCarts());
+// Obtenemos todos los carritos
+router.post("/carts", async (req, res) => {
+    try {
+        const response = await cartManager.newCart();
+        res.json(response);
+    } catch (error) {
+        console.log("Error, no se pudo crear carrito", error);
+    }
 });
 
-CartRouter.get("/:id", async (req, res) => {
-    res.send(await carts.getCartsById(req.params.id));
+// Creamos un nuevo carrito
+router.post("/:cid/products/:pid", async (req, res) => {
+    const { cid, pid } = req.params;
+
+    try {
+        
+        await cartManager.addProductToCart(cid, pid);
+
+    } catch (error) {
+
+        console.error(error);
+        
+    }
+});
+// Obtenemos un producto por su ID
+router.get("/:cid", async (req, res) => {
+    const {cid} = req.params;
+    try {
+        const response = await cartManager.getCartProducts(cid)
+        res.json(response)
+    } catch (error) {
+        res.send('Error al intentar enviar los productos al carrito')
+    }
 });
 
-CartRouter.post("/:cid/products/:pid", async (req, res) => {
-    let cartId = req.params.cid;
-    let productId = req.params.pid;
-    res.send(await carts.addProductToCart(cartId, productId));
-})
-
-export default CartRouter;
+module.exports = router;
