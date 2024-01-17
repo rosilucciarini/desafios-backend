@@ -1,33 +1,38 @@
-const fs = require("fs")
+const fs = require("fs");
+const { v4: uuidv4 } = require("uuid");
 
 class ProductManager {
     constructor(filePath) {
         this.path = filePath;
         this.products = this.loadProducts();
     }
-
-    addProduct(productData) {
-        const newId = this.products.length + 1;
-
-        const newProduct = {
-            id: newId,
-            title: productData.title,
-            description: productData.description,
-            price: productData.price,
-            thumbnail: productData.thumbnail,
-            code: productData.code,
-            stock: productData.stock
-        };
-         
-        //Agrega el nuevo producto al array de productos
-        this.products.push(newProduct);
-       
-        this.saveProducts();
-        //Muestro los productos por consola
-        console.log(`Producto '${productData.title}' agregado con el nuevo ID ${newId}.`);
-    }
-
     
+        addProduct(productData) {
+            // Validar campos obligatorios
+            if (!productData.title || !productData.price || !productData.code) {
+                throw new Error('Campos obligatorios (title, price, code) no proporcionados');
+            }
+    
+            // Genera un nuevo ID único
+            const newId = uuidv4();
+    
+            
+            const newProduct = {
+                id: newId,
+                title: productData.title,
+                description: productData.description || '',
+                price: productData.price,
+                code: productData.code,
+                stock: productData.stock || 0,
+                status: true, // Valor predeterminado
+                category: productData.category || '',
+                thumbnails: productData.thumbnails || []
+            };
+             
+            // Agrega el nuevo producto al array de productos
+            this.products.push(newProduct);
+            return newProduct;
+        }
     loadProducts() {
         try {
             const data = fs.readFileSync(this.path, 'utf8');
@@ -37,7 +42,6 @@ class ProductManager {
             return [];
         }
     }
-
 
     saveProducts() {
         try {
@@ -49,35 +53,32 @@ class ProductManager {
         }
     }
 
-  
     getProducts() {
         return this.products;
-        
     }
-    
+
     getProductById(id) {
-        const product = this.products.find(product => product.id === id);
-       
+        const product = this.products.find(product => product.id == id);
         if (product) {
             return product;
         } else {
             console.log(`El producto con el ID número ${id}. No fue encontrado.`);
         }
     }
-    
+
     updateProduct(id, updatedFields) {
-        
-        const productIndex = this.products.findIndex(product => product.id === id);
-        
-        
+        const productId = parseInt(id, 10); // Convertir ID a número
+    
+        const productIndex = this.products.findIndex(product => product.id === productId);
+    
         if (productIndex !== -1) {
+            // Sobrescribe todos los campos con los proporcionados en updatedFields
             this.products[productIndex] = {
-                ...this.products[productIndex], 
-                ...updatedFields, 
-                id: this.products[productIndex].id 
+                id: this.products[productIndex].id,
+                ...updatedFields,
             };
+    
             this.saveProducts();
-            return this.updateProduct()
             console.log(`El producto con el número de ID ${id} se actualizó`);
         } else {
             console.log(`El producto con el número de ID ${id} no fue encontrado`);
@@ -86,17 +87,21 @@ class ProductManager {
     
     
     deleteProduct(id) {
-        
-        const productIndex = this.products.findIndex(product => product.id === id);
-        
-        if (productIndex !== -1) {
-            
-            this.products.splice(productIndex, 1);
+        try {
+            const productIndex = this.products.findIndex(product => product.id == id);
 
-            this.saveProducts();
-            console.log(`El producto con el número de ID ${id} fue eliminado.`);
-        } else {
-            console.log(`El producto con el número de ID ${id} no fue encontrado.`);
+            if (productIndex !== -1) {
+                const deletedProduct = this.products.splice(productIndex, 1)[0];
+                this.saveProducts();
+                console.log(`El producto con el número de ID ${id} fue eliminado.`);
+                return deletedProduct;
+            } else {
+                console.log(`El producto con el número de ID ${id} no fue encontrado.`);
+                throw new Error(`El producto con el número de ID ${id} no fue encontrado.`);
+            }
+        } catch (error) {
+            console.error(`Error al eliminar producto: ${error.message}`);
+            throw error; 
         }
     }
 }
